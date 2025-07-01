@@ -6,7 +6,7 @@ let drawnNumbers = [];
 let drawInterval = null;
 
 // --- ¡IMPORTANTE! REEMPLAZA ESTA URL con la URL de tu Google Apps Script desplegado ---
-const GOOGLE_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxwEk757_Gw8Le8-qyghCdQiI_1IZt24A9196X1QT-kACCJ-98EW5FvZZhAB1MqowQdkw/exec'; // Tu URL de ejemplo, ¡asegúrate que es la correcta después del redeploy!
+const GOOGLE_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxDaPuhRuye_bN0aAUgqD0uKhVAgUVF_lsWUXrDWvb25e_JfguKicbvrYHzcjwDb_vbqw/exec'; // Tu URL de ejemplo, ¡asegúrate que es la correcta después del redeploy!
 
 
 // Cargar cartones.json (o puedes modificar esto para que venga de Apps Script también)
