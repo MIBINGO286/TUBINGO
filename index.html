@@ -1,53 +1,42 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>BINGO JOKER - Venta y Juego</title>
-<link rel="stylesheet" href="style.css" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BINGO JOKER</title>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
 </head>
-<body>
-  <header>
-    <h1>BINGO JOKER</h1>
-    <nav id="menuPanelControl" class="hidden">
-      <button id="btnSacarNumeros">Sacar números automáticos</button>
-      <button id="btnDetenerSorteo">Detener sorteo</button>
-      <button id="btnModoVertical">Modo Vertical</button>
-      <button id="btnModoHorizontal">Modo Horizontal</button>
-      <button id="btnModoDiagonal">Modo Diagonal</button>
-      <button id="btnModoCartonLleno">Cartón lleno</button>
-      <button id="btnReiniciar">Reiniciar partida</button>
-      <button id="btnQuitarCartones">Quitar cartones vendidos</button>
-    </nav>
-    <div id="loginPanel">
-      <input type="password" id="inputPassword" placeholder="Contraseña para control" />
-      <button id="btnDesbloquear">Desbloquear panel de control</button>
-    </div>
+<body class="bg-gradient-to-b from-black via-red-900 to-black text-white">
+  <header class="text-center py-6">
+    <h1 class="text-4xl font-bold text-yellow-400 drop-shadow-lg">BINGO JOKER</h1>
   </header>
 
-  <main>
-    <section id="cartonesContainer" aria-label="Cartones de bingo">
-      <!-- Cartones se cargarán aquí -->
-    </section>
-    <div id="loading">Cargando más cartones…</div>
+  <main class="px-4 pb-10">
+    <!-- Zona de búsqueda -->
+    <div class="text-center mb-4">
+      <input id="buscarInput" type="text" placeholder="Buscar cartón por número (001-1000)" class="text-black px-4 py-2 rounded shadow">
+    </div>
+
+    <!-- Zona de cartones -->
+    <div id="cartonesContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+
+    <div id="cargando" class="text-center text-yellow-300 mt-4">Cargando más cartones...</div>
   </main>
 
-  <section id="modalReserva" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="modalReservaTitulo">
-    <div class="modal-content">
-      <h2 id="modalReservaTitulo">Reservar cartón #<span id="cartonNum"></span></h2>
-      <form id="formReserva">
-        <input type="text" name="nombre" placeholder="Nombre" required />
-        <input type="text" name="apellido" placeholder="Apellido" required />
-        <input type="tel" name="telefono" placeholder="Teléfono" required pattern="[0-9]{7,15}" />
-        <button type="submit">Reservar y enviar WhatsApp</button>
-      </form>
-      <button id="closeReserva">Cerrar</button>
+  <!-- Panel de extracción y control -->
+  <section id="panelAdmin" class="fixed bottom-0 left-0 w-full bg-black bg-opacity-80 text-center p-2 hidden">
+    <div class="flex flex-wrap justify-around text-sm">
+      <button onclick="extraerBola()" class="bg-yellow-400 text-black px-4 py-2 m-1 rounded font-bold">Extraer Bola</button>
+      <button onclick="reiniciarPartida()" class="bg-red-500 px-4 py-2 m-1 rounded font-bold">Reiniciar</button>
+      <select id="modoJuego" class="text-black px-2 py-1 rounded m-1">
+        <option value="linea">Línea</option>
+        <option value="vertical">Vertical</option>
+        <option value="horizontal">Horizontal</option>
+        <option value="lleno">Cartón Lleno</option>
+      </select>
+      <span id="infoVentas" class="text-green-400 mt-2">0 cartones vendidos</span>
     </div>
-  </section>
-
-  <section id="buscadorCartones">
-    <input type="number" id="inputBuscarCarton" placeholder="Buscar cartón por número" min="1" max="1000" />
-    <button id="btnBuscarCarton">Buscar</button>
   </section>
 
   <script src="script.js"></script>
