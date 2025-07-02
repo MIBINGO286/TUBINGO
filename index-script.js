@@ -1,15 +1,20 @@
 // CONFIGURACIÓN
 const WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbxdrSJhX7HuTyfieoZNo5LY7DkC4Wpz2ltPqWCAGPJFQW6ntTftrtvlBIMV9Q9lvmbnow/exec';
-const CARTONES_JSON = 'cartones.json'; // Archivo JSON con los 1000 cartones
-const WHATSAPP_NUM = '04266404042'; // Tu número para recibir reservas
+const CARTONES_JSON = 'cartones.json'; // archivo con 1000 cartones
+const WHATSAPP_NUM = '04266404042';
 const CARTONES_POR_CARGAR = 50;
+const PASSWORD = 'Jrr035$$*';
 
 // VARIABLES GLOBALES
-let cartones = [];           // Todos los cartones del JSON
-let cartonesVendidos = {};   // IDs reservados desde Google Sheets
-let cartonesCargados = 0;    // Para control de carga progresiva
+let cartones = [];
+let cartonesVendidos = {};
+let cartonesCargados = 0;
+let cartonSeleccionado = null;
 
-// DOM
+let numerosSacados = new Set();
+let intervaloSorteo = null;
+let modoJuego = null; // 'vertical', 'horizontal', 'diagonal', 'carton_lleno'
+
 const container = document.getElementById('cartonesContainer');
 const loading = document.getElementById('loading');
 const modalReserva = document.getElementById('modalReserva');
@@ -17,12 +22,23 @@ const formReserva = document.getElementById('formReserva');
 const cartonNumSpan = document.getElementById('cartonNum');
 const closeReservaBtn = document.getElementById('closeReserva');
 
-let cartonSeleccionado = null;
+const panelControl = document.getElementById('panelControl');
+const btnDesbloquear = document.getElementById('btnDesbloquear');
+const inputPassword = document.getElementById('inputPassword');
+const btnSacarNumeros = document.getElementById('btnSacarNumeros');
+const btnDetenerSorteo = document.getElementById('btnDetenerSorteo');
+const btnModoVertical = document.getElementById('btnModoVertical');
+const btnModoHorizontal = document.getElementById('btnModoHorizontal');
+const btnModoDiagonal = document.getElementById('btnModoDiagonal');
+const btnModoCartonLleno = document.getElementById('btnModoCartonLleno');
+const btnReiniciar = document.getElementById('btnReiniciar');
+const inputBuscarCarton = document.getElementById('inputBuscarCarton');
+const btnBuscarCarton = document.getElementById('btnBuscarCarton');
+const btnQuitarCartones = document.getElementById('btnQuitarCartones');
 
-// --- FUNCIONES ---
-
-// Carga inicial
-async function init() {
+// INICIALIZAR
+window.onload = async () => {
+  bloquearPanelControl(true);
   await cargarCartonesVendidos();
   await cargarCartonesJSON();
   cargarCartonesALaVista();
@@ -33,14 +49,14 @@ async function init() {
       cargarCartonesALaVista();
     }
   });
-}
+};
 
-// Carga los cartones vendidos de Google Sheets vía opensheet.elk.sh
+// FUNCIONES DE CARGA
+
 async function cargarCartonesVendidos() {
   try {
-    const response = await fetch(`https://opensheet.elk.sh/1kPdCww-t1f_CUhD9egbeNn6robyapky8PWCS63P31j4/Hoja%201`);
-    const datos = await response.json();
-    // Guardar IDs que están con Estado RESERVADO o VENDIDO
+    const res = await fetch(`https://opensheet.elk.sh/1kPdCww-t1f_CUhD9egbeNn6robyapky8PWCS63P31j4/Hoja%201`);
+    const datos = await res.json();
     datos.forEach(row => {
       if (row.Estado && (row.Estado.toUpperCase() === 'RESERVADO' || row.Estado.toUpperCase() === 'VENDIDO')) {
         cartonesVendidos[row.ID] = true;
@@ -51,17 +67,15 @@ async function cargarCartonesVendidos() {
   }
 }
 
-// Carga el archivo JSON con todos los cartones
 async function cargarCartonesJSON() {
   try {
-    const response = await fetch(CARTONES_JSON);
-    cartones = await response.json();
+    const res = await fetch(CARTONES_JSON);
+    cartones = await res.json();
   } catch (e) {
     console.error('Error cargando cartones.json:', e);
   }
 }
 
-// Agrega al DOM los próximos cartones que faltan mostrar
 function cargarCartonesALaVista() {
   if (cartonesCargados >= cartones.length) {
     loading.textContent = 'No hay más cartones para cargar.';
@@ -80,7 +94,7 @@ function cargarCartonesALaVista() {
     cartonDiv.dataset.id = id;
     cartonDiv.dataset.vendido = cartonesVendidos[id] ? 'true' : 'false';
     cartonDiv.innerHTML = `
-      <div class="numero-carton">#${id.padStart(4,'0')}</div>
+      <div class="numero-carton">#${id.padStart(4, '0')}</div>
       <table>
         <thead>
           <tr><th>B</th><th>I</th><th>N</th><th>G</th><th>O</th></tr>
@@ -109,7 +123,8 @@ function cargarCartonesALaVista() {
   }
 }
 
-// Abrir modal con formulario para reservar cartón
+// MODAL RESERVA
+
 function abrirModalReserva(id) {
   cartonSeleccionado = id;
   cartonNumSpan.textContent = id.padStart(4, '0');
@@ -117,14 +132,12 @@ function abrirModalReserva(id) {
   modalReserva.style.display = 'block';
 }
 
-// Cerrar modal
 closeReservaBtn.onclick = () => {
   modalReserva.style.display = 'none';
   cartonSeleccionado = null;
 };
 
-// Enviar formulario de reserva
-formReserva.onsubmit = async (e) => {
+formReserva.onsubmit = async e => {
   e.preventDefault();
 
   if (!cartonSeleccionado) return alert('Selecciona un cartón.');
@@ -134,10 +147,9 @@ formReserva.onsubmit = async (e) => {
   const telefono = formReserva.telefono.value.trim();
 
   if (!nombre || !apellido || !telefono) {
-    return alert('Por favor completa todos los campos.');
+    return alert('Completa todos los campos.');
   }
 
-  // Enviar reserva a Google Sheets via Apps Script (POST)
   try {
     const res = await fetch(WEBAPP_URL, {
       method: 'POST',
@@ -150,28 +162,25 @@ formReserva.onsubmit = async (e) => {
         Teléfono: telefono
       })
     });
-    const text = await res.text();
-    if (text !== 'OK') throw new Error('Error en la reserva');
 
-    // Marcar como vendido en frontend para evitar doble compra
+    const text = await res.text();
+    if (text !== 'OK') throw new Error('Error en reserva');
+
     cartonesVendidos[cartonSeleccionado] = true;
     actualizarEstadoCarton(cartonSeleccionado, 'VENDIDO');
 
-    // Enviar mensaje a WhatsApp
     abrirWhatsApp(cartonSeleccionado, nombre, apellido, telefono);
 
-    alert('¡Cartón reservado con éxito!');
+    alert('¡Cartón reservado!');
 
     modalReserva.style.display = 'none';
     cartonSeleccionado = null;
-
   } catch (error) {
-    alert('Error al reservar. Intenta de nuevo.');
+    alert('Error al reservar. Intenta nuevamente.');
     console.error(error);
   }
 };
 
-// Actualizar visualmente el estado del cartón
 function actualizarEstadoCarton(id, estado) {
   const cartonDiv = document.querySelector(`.carton[data-id="${id}"]`);
   if (!cartonDiv) return;
@@ -179,16 +188,159 @@ function actualizarEstadoCarton(id, estado) {
   cartonDiv.dataset.vendido = 'true';
   const estadoDiv = cartonDiv.querySelector('.estado');
   if (estadoDiv) estadoDiv.textContent = estado;
-  // Remover evento click para no reservar más
   cartonDiv.onclick = null;
 }
 
-// Abrir WhatsApp con mensaje prellenado para la reserva
 function abrirWhatsApp(id, nombre, apellido, telefono) {
   const mensaje = encodeURIComponent(`Hola, quiero reservar el cartón #${id.padStart(4,'0')}.\nNombre: ${nombre}\nApellido: ${apellido}\nTeléfono: ${telefono}`);
   const url = `https://wa.me/58${WHATSAPP_NUM}?text=${mensaje}`;
   window.open(url, '_blank');
 }
 
-// Inicializar al cargar la página
-window.onload = init;
+// PANEL DE CONTROL
+
+btnDesbloquear.onclick = () => {
+  const pass = inputPassword.value.trim();
+  if (pass === PASSWORD) {
+    bloquearPanelControl(false);
+    alert('Panel desbloqueado.');
+    inputPassword.value = '';
+  } else {
+    alert('Contraseña incorrecta.');
+  }
+};
+
+function bloquearPanelControl(bloquear) {
+  if (bloquear) {
+    panelControl.classList.add('hidden');
+  } else {
+    panelControl.classList.remove('hidden');
+  }
+}
+
+// BUSCADOR CARTONES
+
+btnBuscarCarton.onclick = () => {
+  const busqueda = inputBuscarCarton.value.trim();
+  if (!busqueda) return alert('Ingresa el número del cartón a buscar.');
+
+  const cartonDiv = document.querySelector(`.carton[data-id="${parseInt(busqueda, 10)}"]`);
+  if (cartonDiv) {
+    cartonDiv.scrollIntoView({behavior: 'smooth', block: 'center'});
+    cartonDiv.classList.add('highlight');
+    setTimeout(() => cartonDiv.classList.remove('highlight'), 2000);
+  } else {
+    alert('Cartón no encontrado.');
+  }
+};
+
+// QUITAR CARTONES VENDIDOS (solo panel)
+
+btnQuitarCartones.onclick = () => {
+  if (!confirm('¿Seguro quieres quitar todos los cartones vendidos? Esta acción no se puede deshacer.')) return;
+  // Remover visualmente
+  Object.keys(cartonesVendidos).forEach(id => {
+    const c = document.querySelector(`.carton[data-id="${id}"]`);
+    if (c) c.remove();
+  });
+  cartonesVendidos = {};
+  alert('Cartones vendidos removidos de la vista.');
+};
+
+// SORTEO AUTOMÁTICO
+
+btnSacarNumeros.onclick = () => {
+  if (intervaloSorteo) return alert('El sorteo ya está en marcha.');
+
+  intervaloSorteo = setInterval(() => {
+    if (numerosSacados.size >= 75) {
+      clearInterval(intervaloSorteo);
+      alert('¡Sorteo terminado!');
+      return;
+    }
+    let n;
+    do {
+      n = Math.floor(Math.random() * 75) + 1;
+    } while (numerosSacados.has(n));
+    numerosSacados.add(n);
+    anunciarNumero(n);
+    marcarNumeroEnCartones(n);
+    // Aquí puedes llamar función para verificar ganadores según modoJuego
+  }, 3000);
+};
+
+btnDetenerSorteo.onclick = () => {
+  if (intervaloSorteo) {
+    clearInterval(intervaloSorteo);
+    intervaloSorteo = null;
+    alert('Sorteo detenido.');
+  }
+};
+
+btnModoVertical.onclick = () => {
+  modoJuego = 'vertical';
+  alert('Modo juego: Vertical');
+};
+
+btnModoHorizontal.onclick = () => {
+  modoJuego = 'horizontal';
+  alert('Modo juego: Horizontal');
+};
+
+btnModoDiagonal.onclick = () => {
+  modoJuego = 'diagonal';
+  alert('Modo juego: Diagonal');
+};
+
+btnModoCartonLleno.onclick = () => {
+  modoJuego = 'carton_lleno';
+  alert('Modo juego: Cartón lleno');
+};
+
+btnReiniciar.onclick = () => {
+  if (!confirm('¿Seguro quieres reiniciar la partida? Se borrarán los números sacados.')) return;
+  numerosSacados.clear();
+  // Remover marcado de números en los cartones
+  document.querySelectorAll('.carton td').forEach(td => {
+    td.classList.remove('marcado');
+  });
+  alert('Partida reiniciada.');
+};
+
+// Función para anunciar número con voz y mostrar letra+numero
+function anunciarNumero(num) {
+  const letras = ['B', 'I', 'N', 'G', 'O'];
+  // Definir letra según rango del número
+  let letra = 'B';
+  if (num >= 1 && num <= 15) letra = 'B';
+  else if (num >= 16 && num <= 30) letra = 'I';
+  else if (num >= 31 && num <= 45) letra = 'N';
+  else if (num >= 46 && num <= 60) letra = 'G';
+  else if (num >= 61 && num <= 75) letra = 'O';
+
+  const texto = `${letra} ${num}`;
+
+  // Voz
+  if ('speechSynthesis' in window) {
+    const utterance = new SpeechSynthesisUtterance(texto);
+    utterance.lang = 'es-VE'; // Español Venezuela
+    window.speechSynthesis.speak(utterance);
+  }
+
+  // Mostrar en pantalla (puedes crear un div para mostrar)
+  console.log('Número sorteado:', texto);
+}
+
+// Marcar número sorteado en los cartones
+function marcarNumeroEnCartones(num) {
+  document.querySelectorAll('.carton').forEach(carton => {
+    if (carton.dataset.vendido === 'true') return; // No marcar cartones vendidos
+
+    const tds = carton.querySelectorAll('tbody td');
+    tds.forEach(td => {
+      if (parseInt(td.textContent, 10) === num) {
+        td.classList.add('marcado');
+      }
+    });
+  });
+}
