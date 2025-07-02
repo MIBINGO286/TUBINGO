@@ -1,4 +1,4 @@
-const SHEET_ID = '1p-YXfD8bEEuqKw1jck6mITrRizMAy_qk5IMkl0QEWhg'; // tu hoja de Google Sheet
+const SHEET_ID = 'AKfycbzAfOn126VhY-ZCsX2s6-XjoqdNrRHYjZcAkSFYHlpT98d5va-lF1cG8XdNAyxxLc9b3g'; // tu hoja de Google Sheet
 const SHEET_NAME = 'Hoja 1'; // pestaña
 const WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbzAfOn126VhY-ZCsX2s6-XjoqdNrRHYjZcAkSFYHlpT98d5va-lF1cG8XdNAyxxLc9b3g/exec'; // tu web app de Apps Script
 
