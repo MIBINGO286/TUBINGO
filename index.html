@@ -1,111 +1,36 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>MI BINGO</title>
-  <style>
-    body { font-family: Arial, sans-serif; background: #f5e4c3; padding: 10px; }
-    .controls button, .controls input { margin: 5px; padding: 10px; font-size: 16px; }
-    .bingo-wrapper { margin: 10px; display: inline-block; }
-    .bingo-card { background: white; border: 2px solid #333; border-radius: 10px; cursor: pointer; } /* Added cursor: pointer */
-    .bingo-card.sold-card { opacity: 0.5; cursor: not-allowed; } /* New class for sold cards */
-    .bingo-header { text-align: center; background: red; color: white; padding: 10px; font-weight: bold; }
-    .bingo-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 2px; padding: 10px; }
-    .bingo-cell { background: green; color: white; text-align: center; padding: 10px; }
-    .bingo-cell.free { background: red !important; } /* Use class for free space */
-    .bingo-cell.marked { background-color: darkblue; } /* Style for marked numbers */
-
-    /* Estilos para el modal */
-    #reservationModal {
-      display:none;
-      position:fixed;
-      top:0;
-      left:0;
-      right:0;
-      bottom:0;
-      background:rgba(0,0,0,0.5);
-      z-index:999;
-      display: flex; /* Para centrar el contenido */
-      justify-content: center; /* Para centrar el contenido */
-      align-items: center; /* Para centrar el contenido */
-    }
-    #reservationModal > div {
-      background:#fff;
-      max-width:400px;
-      width: 90%; /* Asegura que sea responsivo */
-      margin: auto; /* Centra el div */
-      padding:20px;
-      border-radius:10px;
-      text-align:center;
-      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-    }
-    #reservationModal input {
-      width:calc(90% - 20px); /* Ajuste para padding */
-      margin-top:10px;
-      padding:10px;
-      border: 1px solid #ddd;
-      border-radius: 4px;
-      box-sizing: border-box; /* Incluye padding y borde en el ancho */
-    }
-    #reservationModal button {
-      padding:10px 20px;
-      background:green;
-      color:white;
-      border:none;
-      border-radius:5px;
-      font-size:16px;
-      cursor: pointer;
-      margin-top: 10px; /* Espacio entre botones */
-    }
-    #reservationModal button.cancel-btn { /* Clase para el botón cancelar */
-      background: #ccc;
-      color: #333;
-    }
-  </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Venta de Cartones - Bingo Joker</title>
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <h1 style="text-align:center;">🎉 MI BINGO 🎉</h1>
+  <header>
+    <h1>BINGO JOKER - Venta de Cartones</h1>
+  </header>
 
-  <div class="controls">
-    <input id="adminPassword" type="password" placeholder="Contraseña"/>
-    <button id="adminUnlockBtn" onclick="unlockAdminButtons()">Desbloquear Admin</button> <input id="searchInput" type="number" placeholder="Buscar cartón"/>
-    <button onclick="scrollToCard()">Ir al cartón</button>
+  <main>
+    <div id="cartones-container"></div>
+    <div id="loader">Cargando más cartones...</div>
+  </main>
 
-    <input id="cartonNumberToUnmark" type="number" placeholder="N° cartón a desmarcar" min="1" max="1000"/>
-    <button id="unmarkCardBtn" onclick="unmarkSoldCard()">❌ Quitar marca de VENDIDO</button> <button class="admin-only" style="display:none;" onclick="drawNumber()">Sacar número</button>
-    <button class="admin-only" style="display:none;" onclick="startAutoDraw()">Sacar automático</button>
-    <button class="admin-only" style="display:none;" onclick="stopAutoDraw()">Detener automático</button>
-    <button class="admin-only" style="display:none;" onclick="setGameMode('linea')">Línea</button>
-    <button class="admin-only" style="display:none;" onclick="setGameMode('horizontal')">Horizontal</button>
-    <button class="admin-only" style="display:none;" onclick="setGameMode('diagonal')">Diagonal</button>
-    <button class="admin-only" style="display:none;" onclick="setGameMode('lleno')">Cartón lleno</button>
-    <button class="admin-only" style="display:none;" onclick="resetGame()">🔄 Reiniciar partida</button>
-
-    <div id="drawn-number" style="margin-top:10px; font-size:24px;"></div>
-    <div id="drawn-numbers-history" style="font-size:18px;"></div>
-  </div>
-
-  <div id="cards"></div>
-
-  <div id="reservationModal">
-    <div>
-      <h2>Apartar Cartón <span id="modalCardNumber"></span></h2>
-      <p><strong>Banco:</strong> Banco de Venezuela</p>
-      <p><strong>C.I.:</strong> 28067793</p>
-      <p><strong>Teléfono:</strong> 04266404042</p>
-      
-      <input id="userName" placeholder="Tu Nombre" style="width:90%; margin-top:10px; padding:10px;" type="text" required/>
-      <input id="userLastName" placeholder="Tu Apellido" style="width:90%; margin-top:10px; padding:10px;" type="text" required/>
-      
-      <input id="userPhone" placeholder="Tu número de teléfono (Ej: +584121234567)" style="width:90%; margin-top:10px; padding:10px;" type="tel" required/>
-      <br/><br/>
-      <button id="btnSendReservation" onclick="sendReservation()" style="padding:10px 20px; background:green; color:white; border:none; border-radius:5px; font-size:16px;">Apartar por WhatsApp</button>
-      <br/>
-      <button onclick="closeModal()" class="cancel-btn" style="padding:8px 15px;">Cancelar</button>
+  <!-- Formulario de reserva -->
+  <div id="formulario-reserva" class="modal hidden">
+    <div class="modal-content">
+      <h2>Reservar Cartón <span id="carton-numero"></span></h2>
+      <form id="form-reserva">
+        <input type="hidden" name="ID" id="input-id">
+        <label>Nombre:<input type="text" name="Nombre" required></label>
+        <label>Apellido:<input type="text" name="Apellido" required></label>
+        <label>Teléfono:<input type="text" name="Teléfono" required></label>
+        <button type="submit">Reservar</button>
+        <button type="button" onclick="cerrarFormulario()">Cancelar</button>
+      </form>
     </div>
   </div>
 
-  <script src="index-script.js"></script>
+  <script src="script-venta.js"></script>
 </body>
 </html>
