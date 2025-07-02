@@ -1,6 +1,6 @@
-const SHEET_ID = 'AKfycby5r8FcIEhfbqnxZldC6CRNbJIp4vlwaXMRNT4zoP1xLKKLKusxcXz0GbrC7fy8hPSxCA'; // tu hoja de Google Sheet
-const SHEET_NAME = 'Hoja 1'; // pestaña
-const WEBAPP_URL = 'https://script.google.com/macros/s/AKfycby5r8FcIEhfbqnxZldC6CRNbJIp4vlwaXMRNT4zoP1xLKKLKusxcXz0GbrC7fy8hPSxCA/exec'; // tu web app de Apps Script
+const SHEET_ID = '1kPdCww-t1f_CUhD9egbeNn6robyapky8PWCS63P31j4';
+const SHEET_NAME = 'Hoja 1';
+const WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbztMoHO_6AtF3RxLggY5sNcJFUOfVnD9ql8mZWIpMGE_I-UVAHc30Nm79M__h-IZdaxYg/exec';
 
 let cartones = [], vendidos = new Set(), cargados = 0, cargando = false;
 
@@ -50,4 +50,42 @@ function cerrarFormulario() {
   document.getElementById('form-reserva').reset();
 }
 
-document.getElementByI
+document.getElementById('form-reserva').addEventListener('submit', e => {
+  e.preventDefault();
+  const form = e.target;
+  const formData = new FormData(form);
+  const iframe = document.createElement('iframe');
+  iframe.name = 'hidden_iframe';
+  iframe.style.display = 'none';
+  document.body.appendChild(iframe);
+  const postForm = document.createElement('form');
+  postForm.action = WEBAPP_URL;
+  postForm.method = 'POST';
+  postForm.target = 'hidden_iframe';
+  for (const [k, v] of formData.entries()) {
+    const input = document.createElement('input');
+    input.name = k;
+    input.value = v;
+    postForm.appendChild(input);
+  }
+  document.body.appendChild(postForm);
+  postForm.submit();
+  vendidos.add(formData.get('ID'));
+  cerrarFormulario();
+  document.getElementById('cartones-container').innerHTML = '';
+  cargados = 0;
+  cargarMasCartones();
+});
+
+window.addEventListener('scroll', () => {
+  if (window.innerHeight + window.scrollY >= document.body.offsetHeight - 100) {
+    cargarMasCartones();
+  }
+});
+
+fetch('cartones.json')
+  .then(r => r.json())
+  .then(data => {
+    cartones = data;
+    cargarVendidos();
+  });
