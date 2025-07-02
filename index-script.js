@@ -1,6 +1,6 @@
-const SHEET_ID = 'AKfycbzAfOn126VhY-ZCsX2s6-XjoqdNrRHYjZcAkSFYHlpT98d5va-lF1cG8XdNAyxxLc9b3g'; // tu hoja de Google Sheet
+const SHEET_ID = 'AKfycby5r8FcIEhfbqnxZldC6CRNbJIp4vlwaXMRNT4zoP1xLKKLKusxcXz0GbrC7fy8hPSxCA'; // tu hoja de Google Sheet
 const SHEET_NAME = 'Hoja 1'; // pestaña
-const WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbzAfOn126VhY-ZCsX2s6-XjoqdNrRHYjZcAkSFYHlpT98d5va-lF1cG8XdNAyxxLc9b3g/exec'; // tu web app de Apps Script
+const WEBAPP_URL = 'https://script.google.com/macros/s/AKfycby5r8FcIEhfbqnxZldC6CRNbJIp4vlwaXMRNT4zoP1xLKKLKusxcXz0GbrC7fy8hPSxCA/exec'; // tu web app de Apps Script
 
 let cartones = [], vendidos = new Set(), cargados = 0, cargando = false;
 
