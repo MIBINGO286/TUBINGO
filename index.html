@@ -7,43 +7,49 @@
 <link rel="stylesheet" href="style.css" />
 </head>
 <body>
+  <header>
+    <h1>BINGO JOKER</h1>
+    <nav id="menuPanelControl" class="hidden">
+      <button id="btnSacarNumeros">Sacar números automáticos</button>
+      <button id="btnDetenerSorteo">Detener sorteo</button>
+      <button id="btnModoVertical">Modo Vertical</button>
+      <button id="btnModoHorizontal">Modo Horizontal</button>
+      <button id="btnModoDiagonal">Modo Diagonal</button>
+      <button id="btnModoCartonLleno">Cartón lleno</button>
+      <button id="btnReiniciar">Reiniciar partida</button>
+      <button id="btnQuitarCartones">Quitar cartones vendidos</button>
+    </nav>
+    <div id="loginPanel">
+      <input type="password" id="inputPassword" placeholder="Contraseña para control" />
+      <button id="btnDesbloquear">Desbloquear panel de control</button>
+    </div>
+  </header>
 
-<header>
-  <h1>BINGO JOKER</h1>
-  <button id="btnPanelControl">🔒 Desbloquear Panel de Control</button>
-</header>
+  <main>
+    <section id="cartonesContainer" aria-label="Cartones de bingo">
+      <!-- Cartones se cargarán aquí -->
+    </section>
+    <div id="loading">Cargando más cartones…</div>
+  </main>
 
-<section id="cartonesContainer"></section>
-<div id="loading">Cargando más cartones…</div>
+  <section id="modalReserva" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="modalReservaTitulo">
+    <div class="modal-content">
+      <h2 id="modalReservaTitulo">Reservar cartón #<span id="cartonNum"></span></h2>
+      <form id="formReserva">
+        <input type="text" name="nombre" placeholder="Nombre" required />
+        <input type="text" name="apellido" placeholder="Apellido" required />
+        <input type="tel" name="telefono" placeholder="Teléfono" required pattern="[0-9]{7,15}" />
+        <button type="submit">Reservar y enviar WhatsApp</button>
+      </form>
+      <button id="closeReserva">Cerrar</button>
+    </div>
+  </section>
 
-<!-- Formulario reserva -->
-<div id="modalReserva" class="modal">
-  <div class="modal-content">
-    <span id="closeReserva" class="close">&times;</span>
-    <h2>Reservar Cartón <span id="cartonNum"></span></h2>
-    <form id="formReserva">
-      <label>Nombre:<input type="text" name="nombre" required></label>
-      <label>Apellido:<input type="text" name="apellido" required></label>
-      <label>Teléfono:<input type="tel" name="telefono" required pattern="[0-9]{7,15}"></label>
-      <button type="submit">Reservar</button>
-    </form>
-  </div>
-</div>
+  <section id="buscadorCartones">
+    <input type="number" id="inputBuscarCarton" placeholder="Buscar cartón por número" min="1" max="1000" />
+    <button id="btnBuscarCarton">Buscar</button>
+  </section>
 
-<!-- Panel Control -->
-<div id="panelControl" class="hidden">
-  <h2>Panel de Control</h2>
-  <button id="btnSorteo">Iniciar Sorteo Automático</button>
-  <button id="btnDetener">Detener Sorteo</button>
-  <button id="btnModoVertical">Modo Vertical</button>
-  <button id="btnModoHorizontal">Modo Horizontal</button>
-  <button id="btnModoDiagonal">Modo Diagonal</button>
-  <button id="btnModoCartonLleno">Modo Cartón Lleno</button>
-  <button id="btnReiniciar">Reiniciar Partida</button>
-  <input type="number" id="inputBuscarCarton" placeholder="Buscar cartón" min="1" max="1000">
-  <button id="btnBuscarCarton">Buscar</button>
-</div>
-
-<script src="script.js"></script>
+  <script src="script.js"></script>
 </body>
 </html>
