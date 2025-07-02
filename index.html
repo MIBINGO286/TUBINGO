@@ -1,36 +1,49 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Venta de Cartones - Bingo Joker</title>
-  <link rel="stylesheet" href="style.css">
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>BINGO JOKER - Venta y Juego</title>
+<link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <header>
-    <h1>BINGO JOKER - Venta de Cartones</h1>
-  </header>
 
-  <main>
-    <div id="cartones-container"></div>
-    <div id="loader">Cargando más cartones...</div>
-  </main>
+<header>
+  <h1>BINGO JOKER</h1>
+  <button id="btnPanelControl">🔒 Desbloquear Panel de Control</button>
+</header>
 
-  <!-- Formulario de reserva -->
-  <div id="formulario-reserva" class="modal hidden">
-    <div class="modal-content">
-      <h2>Reservar Cartón <span id="carton-numero"></span></h2>
-      <form id="form-reserva">
-        <input type="hidden" name="ID" id="input-id">
-        <label>Nombre:<input type="text" name="Nombre" required></label>
-        <label>Apellido:<input type="text" name="Apellido" required></label>
-        <label>Teléfono:<input type="text" name="Teléfono" required></label>
-        <button type="submit">Reservar</button>
-        <button type="button" onclick="cerrarFormulario()">Cancelar</button>
-      </form>
-    </div>
+<section id="cartonesContainer"></section>
+<div id="loading">Cargando más cartones…</div>
+
+<!-- Formulario reserva -->
+<div id="modalReserva" class="modal">
+  <div class="modal-content">
+    <span id="closeReserva" class="close">&times;</span>
+    <h2>Reservar Cartón <span id="cartonNum"></span></h2>
+    <form id="formReserva">
+      <label>Nombre:<input type="text" name="nombre" required></label>
+      <label>Apellido:<input type="text" name="apellido" required></label>
+      <label>Teléfono:<input type="tel" name="telefono" required pattern="[0-9]{7,15}"></label>
+      <button type="submit">Reservar</button>
+    </form>
   </div>
+</div>
 
-  <script src="script-venta.js"></script>
+<!-- Panel Control -->
+<div id="panelControl" class="hidden">
+  <h2>Panel de Control</h2>
+  <button id="btnSorteo">Iniciar Sorteo Automático</button>
+  <button id="btnDetener">Detener Sorteo</button>
+  <button id="btnModoVertical">Modo Vertical</button>
+  <button id="btnModoHorizontal">Modo Horizontal</button>
+  <button id="btnModoDiagonal">Modo Diagonal</button>
+  <button id="btnModoCartonLleno">Modo Cartón Lleno</button>
+  <button id="btnReiniciar">Reiniciar Partida</button>
+  <input type="number" id="inputBuscarCarton" placeholder="Buscar cartón" min="1" max="1000">
+  <button id="btnBuscarCarton">Buscar</button>
+</div>
+
+<script src="script.js"></script>
 </body>
 </html>
