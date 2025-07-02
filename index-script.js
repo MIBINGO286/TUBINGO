@@ -157,4 +157,43 @@ formReserva.onsubmit = async e => {
         ID: cartonSeleccionado,
         Estado: 'RESERVADO',
         Nombre: nombre,
-        Apellido: apellido
+        Apellido: apellido,
+        Teléfono: telefono
+      })
+    });
+
+    const text = await res.text();
+    if (text === 'OK') {
+      // Actualizamos el cartón en pantalla a vendido
+      cartonesVendidos[cartonSeleccionado] = true;
+      const cartonDiv = container.querySelector(`.carton[data-id="${cartonSeleccionado}"]`);
+      if (cartonDiv) {
+        cartonDiv.classList.add('vendido');
+        const estadoDiv = cartonDiv.querySelector('.estado');
+        if (estadoDiv) estadoDiv.textContent = 'VENDIDO';
+        cartonDiv.removeEventListener('click', abrirModalReserva);
+      }
+
+      // Cerramos el modal
+      modalReserva.classList.add('hidden');
+      cartonSeleccionado = null;
+
+      // Abrir WhatsApp para enviar mensaje
+      const mensaje = encodeURIComponent(
+        `Hola, quiero reservar el cartón #${cartonSeleccionado.toString().padStart(4, '0')}.\n` +
+        `Nombre: ${nombre}\nApellido: ${apellido}\nTeléfono: ${telefono}`
+      );
+      const urlWhatsapp = `https://wa.me/58${WHATSAPP_NUM}?text=${mensaje}`;
+      window.open(urlWhatsapp, '_blank');
+
+      alert('Cartón reservado correctamente. Se abrirá WhatsApp para confirmar tu reserva.');
+    } else {
+      alert('Error al reservar. Intenta nuevamente más tarde.');
+    }
+  } catch (error) {
+    console.error('Error en reserva:', error);
+    alert('Error en la conexión. Intenta de nuevo.');
+  }
+};
+
+        
