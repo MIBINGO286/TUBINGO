@@ -1,199 +1,90 @@
-// -- CONFIGURACIÓN -- 
-const WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbxdrSJhX7HuTyfieoZNo5LY7DkC4Wpz2ltPqWCAGPJFQW6ntTftrtvlBIMV9Q9lvmbnow/exec';
-const CARTONES_JSON = 'cartones.json';
-const WHATSAPP_NUM = '04266404042';
-const PASSWORD = 'Jrr035$$*';
-
-const CARTONES_POR_CARGAR = 50;
-
-// -- VARIABLES GLOBALES --
+const cartonesPorCarga = 50;
 let cartones = [];
-let cartonesVendidos = {};
-let cartonesCargados = 0;
-let cartonSeleccionado = null;
+let cartonesMostrados = 0;
+let cargando = false;
 
-let numerosSacados = new Set();
-let intervaloSorteo = null;
-let modoJuego = null;
+// WhatsApp número del vendedor
+const whatsappBase = "https://wa.me/584120985491?text=Hola,%20quiero%20comprar%20el%20cart%C3%B3n%20n%C3%BAmero%20";
 
-// -- ELEMENTOS DOM --
-const container = document.getElementById('cartonesContainer');
-const loading = document.getElementById('loading');
-const modalReserva = document.getElementById('modalReserva');
-const formReserva = document.getElementById('formReserva');
-const cartonNumSpan = document.getElementById('cartonNum');
-const closeReservaBtn = document.getElementById('closeReserva');
+// Fetch inicial de cartones
+async function cargarCartones() {
+  if (cargando || cartonesMostrados >= 1000) return;
+  cargando = true;
+  document.getElementById("cargando").style.display = "block";
 
-const panelControl = document.getElementById('menuPanelControl');
-const btnDesbloquear = document.getElementById('btnDesbloquear');
-const inputPassword = document.getElementById('inputPassword');
-const btnSacarNumeros = document.getElementById('btnSacarNumeros');
-const btnDetenerSorteo = document.getElementById('btnDetenerSorteo');
-const btnModoVertical = document.getElementById('btnModoVertical');
-const btnModoHorizontal = document.getElementById('btnModoHorizontal');
-const btnModoDiagonal = document.getElementById('btnModoDiagonal');
-const btnModoCartonLleno = document.getElementById('btnModoCartonLleno');
-const btnReiniciar = document.getElementById('btnReiniciar');
-const inputBuscarCarton = document.getElementById('inputBuscarCarton');
-const btnBuscarCarton = document.getElementById('btnBuscarCarton');
-const btnQuitarCartones = document.getElementById('btnQuitarCartones');
-
-// -- INICIO --
-window.onload = async () => {
-  bloquearPanelControl(true);
-  await cargarCartonesVendidos();
-  await cargarCartonesJSON();
-  cargarCartonesALaVista();
-
-  window.addEventListener('scroll', () => {
-    if ((window.innerHeight + window.scrollY) >= document.body.offsetHeight - 300) {
-      cargarCartonesALaVista();
-    }
-  });
-}
-
-// -- FUNCIONES --
-
-async function cargarCartonesVendidos() {
-  try {
-    const res = await fetch('https://opensheet.elk.sh/1kPdCww-t1f_CUhD9egbeNn6robyapky8PWCS63P31j4/Hoja%201');
-    const datos = await res.json();
-    datos.forEach(row => {
-      if (row.Estado && (row.Estado.toUpperCase() === 'RESERVADO' || row.Estado.toUpperCase() === 'VENDIDO')) {
-        cartonesVendidos[row.ID] = true;
-      }
-    });
-  } catch (e) {
-    console.error('Error cargando cartones vendidos:', e);
-  }
-}
-
-async function cargarCartonesJSON() {
-  try {
-    const res = await fetch(CARTONES_JSON);
+  if (cartones.length === 0) {
+    const res = await fetch("cartones.json");
     cartones = await res.json();
-  } catch (e) {
-    console.error('Error cargando cartones.json:', e);
-  }
-}
-
-function cargarCartonesALaVista() {
-  if (cartonesCargados >= cartones.length) {
-    loading.textContent = 'No hay más cartones para cargar.';
-    return;
-  }
-  loading.style.display = 'block';
-
-  const fragment = document.createDocumentFragment();
-
-  for (let i = cartonesCargados; i < cartonesCargados + CARTONES_POR_CARGAR && i < cartones.length; i++) {
-    const c = cartones[i];
-    const id = c.ID.toString();
-
-    const cartonDiv = document.createElement('div');
-    cartonDiv.className = 'carton';
-    cartonDiv.dataset.id = id;
-    cartonDiv.dataset.vendido = cartonesVendidos[id] ? 'true' : 'false';
-    cartonDiv.innerHTML = `
-      <div class="numero-carton">#${id.padStart(4, '0')}</div>
-      <table>
-        <thead>
-          <tr><th>B</th><th>I</th><th>N</th><th>G</th><th>O</th></tr>
-        </thead>
-        <tbody>
-          ${c.tablero.map(fila => '<tr>' + fila.map(num => `<td>${num || ''}</td>`).join('') + '</tr>').join('')}
-        </tbody>
-      </table>
-      <div class="estado">${cartonesVendidos[id] ? 'VENDIDO' : 'DISPONIBLE'}</div>
-    `;
-
-    if (cartonesVendidos[id]) {
-      cartonDiv.classList.add('vendido');
-    } else {
-      cartonDiv.addEventListener('click', () => abrirModalReserva(id));
-    }
-
-    fragment.appendChild(cartonDiv);
   }
 
-  container.appendChild(fragment);
-  cartonesCargados += CARTONES_POR_CARGAR;
+  const contenedor = document.getElementById("cartonesContainer");
+  const siguientes = cartones.slice(cartonesMostrados, cartonesMostrados + cartonesPorCarga);
 
-  if (cartonesCargados >= cartones.length) {
-    loading.textContent = 'Todos los cartones están cargados.';
-  }
-}
+  siguientes.forEach(carton => {
+    const div = document.createElement("div");
+    div.classList.add("carton");
 
-function abrirModalReserva(id) {
-  cartonSeleccionado = id;
-  cartonNumSpan.textContent = id.toString().padStart(4, '0');
-  formReserva.reset();
-  modalReserva.classList.remove('hidden');
-}
+    const idLabel = document.createElement("div");
+    idLabel.className = "carton-id";
+    idLabel.innerText = `Cartón #${carton.id}`;
+    div.appendChild(idLabel);
 
-closeReservaBtn.onclick = () => {
-  modalReserva.classList.add('hidden');
-  cartonSeleccionado = null;
-};
-
-formReserva.onsubmit = async e => {
-  e.preventDefault();
-
-  if (!cartonSeleccionado) return alert('Selecciona un cartón.');
-
-  const nombre = formReserva.nombre.value.trim();
-  const apellido = formReserva.apellido.value.trim();
-  const telefono = formReserva.telefono.value.trim();
-
-  if (!nombre || !apellido || !telefono) {
-    return alert('Completa todos los campos.');
-  }
-
-  try {
-    const res = await fetch(WEBAPP_URL, {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({
-        ID: cartonSeleccionado,
-        Estado: 'RESERVADO',
-        Nombre: nombre,
-        Apellido: apellido,
-        Teléfono: telefono
-      })
+    const tabla = document.createElement("div");
+    carton.grid.forEach(fila => {
+      fila.forEach(n => {
+        const celda = document.createElement("div");
+        celda.className = "celda";
+        celda.innerText = n === 0 ? "★" : n;
+        tabla.appendChild(celda);
+      });
+      const br = document.createElement("br");
+      tabla.appendChild(br);
     });
 
-    const text = await res.text();
-    if (text === 'OK') {
-      // Actualizamos el cartón en pantalla a vendido
-      cartonesVendidos[cartonSeleccionado] = true;
-      const cartonDiv = container.querySelector(`.carton[data-id="${cartonSeleccionado}"]`);
-      if (cartonDiv) {
-        cartonDiv.classList.add('vendido');
-        const estadoDiv = cartonDiv.querySelector('.estado');
-        if (estadoDiv) estadoDiv.textContent = 'VENDIDO';
-        cartonDiv.removeEventListener('click', abrirModalReserva);
-      }
+    div.appendChild(tabla);
 
-      // Cerramos el modal
-      modalReserva.classList.add('hidden');
-      cartonSeleccionado = null;
+    // Botón de WhatsApp
+    const boton = document.createElement("a");
+    boton.href = `${whatsappBase}${carton.id}`;
+    boton.target = "_blank";
+    boton.innerText = "Comprar";
+    boton.className = "btn-whatsapp mt-2 inline-block";
+    div.appendChild(boton);
 
-      // Abrir WhatsApp para enviar mensaje
-      const mensaje = encodeURIComponent(
-        `Hola, quiero reservar el cartón #${cartonSeleccionado.toString().padStart(4, '0')}.\n` +
-        `Nombre: ${nombre}\nApellido: ${apellido}\nTeléfono: ${telefono}`
-      );
-      const urlWhatsapp = `https://wa.me/58${WHATSAPP_NUM}?text=${mensaje}`;
-      window.open(urlWhatsapp, '_blank');
+    contenedor.appendChild(div);
+  });
 
-      alert('Cartón reservado correctamente. Se abrirá WhatsApp para confirmar tu reserva.');
-    } else {
-      alert('Error al reservar. Intenta nuevamente más tarde.');
-    }
-  } catch (error) {
-    console.error('Error en reserva:', error);
-    alert('Error en la conexión. Intenta de nuevo.');
+  cartonesMostrados += cartonesPorCarga;
+  cargando = false;
+  if (cartonesMostrados >= 1000) {
+    document.getElementById("cargando").innerText = "Todos los cartones han sido cargados.";
+  } else {
+    document.getElementById("cargando").style.display = "none";
   }
-};
+}
 
-        
+// Buscar cartón por número
+document.getElementById("buscarInput").addEventListener("input", e => {
+  const val = e.target.value.trim();
+  if (!/^[0-9]{1,4}$/.test(val)) return;
+
+  const id = val.padStart(3, '0');
+  const index = cartones.findIndex(c => c.id === id);
+  if (index >= 0) {
+    const container = document.getElementById("cartonesContainer");
+    const target = container.children[index];
+    if (target) target.scrollIntoView({ behavior: "smooth", block: "center" });
+  }
+});
+
+// Cargar cartones al hacer scroll
+window.addEventListener("scroll", () => {
+  if (window.innerHeight + window.scrollY >= document.body.offsetHeight - 300) {
+    cargarCartones();
+  }
+});
+
+// Inicio automático
+window.addEventListener("DOMContentLoaded", () => {
+  cargarCartones();
+});
