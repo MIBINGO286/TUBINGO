@@ -1,147 +1,137 @@
+/*  =========  CONFIGURACIÓN  =========  */
+const API_URL  = 'https://script.google.com/macros/s/AKfycbxdrSJhX7HuTyfieoZNo5LY7DkC4Wpz2ltPqWCAGPJFQW6ntTftrtvlBIMV9Q9lvmbnow/exec';
+const CARTONES_JSON = 'bingo_cards.json';      // pon aquí tu archivo de 1000 cartones
+const BLOQUE = 50;                             // cartones por carga
+const whatsappBase = 'https://wa.me/584266404042?text=Hola,%20quiero%20comprar%20el%20cart%C3%B3n%20n%C3%BAmero%20';
 
-const API_URL = 'https://script.google.com/macros/s/AKfycbxdrSJhX7HuTyfieoZNo5LY7DkC4Wpz2ltPqWCAGPJFQW6ntTftrtvlBIMV9Q9lvmbnow/exec';
-const CARDS_JSON = 'bingo_cards.json';
-const WHATSAPP_PHONE = '584266404042';
-const ADMIN_PASSWORD = 'Jrr035$$*';
-const DRAW_INTERVAL = 3000;
+/*  =========  ESTADO  =========  */
+let cartones  = [];
+let vendidos  = new Set();
+let pintados  = 0;
+let cargando  = false;
 
-let drawnNumbers = [];
-let drawInterval;
-let isDrawing = false;
-let voiceEnabled = true;
-let currentMode = 'full';
-let unlocked = false;
-let cardsData = [];
+/*  =========  ELEMENTOS DOM  =========  */
+const contenedor = document.getElementById('cartones-container');
+const loader     = document.getElementById('loader');
+const modal      = document.getElementById('modal');
+const formRes    = document.getElementById('form-reserva');
+const spanNum    = document.getElementById('carton-numero');
+const inputID    = document.getElementById('input-id');
 
-const drawnGrid = document.getElementById('drawn-grid');
-const cardsContainer = document.getElementById('cards-container');
-const sentinel = document.getElementById('sentinel');
+/*  =========  INICIO  =========  */
+window.addEventListener('DOMContentLoaded', async () => {
+  await cargarCartones();
+  await cargarVendidos();
+  pintarBloque();
+  observarScroll();
+});
 
-async function loadCards(offset = 0, limit = 50) {
-  const res = await fetch(CARDS_JSON);
-  const all = await res.json();
-  cardsData = all;
-  const slice = all.slice(offset, offset + limit);
-  slice.forEach(card => renderCard(card));
+/*  =========  CARGA DE CARTONES  =========  */
+async function cargarCartones() {
+  cartones = await fetch(CARTONES_JSON).then(r => r.json());
 }
 
-function renderCard(card) {
-  const div = document.createElement('div');
-  div.className = 'card';
-  div.dataset.id = card.id;
-  const estado = card.estado || 'DISPONIBLE';
-  if (estado === 'RESERVADO') div.classList.add('reserved');
-  div.innerHTML = `<div class="card-id">#${card.id}</div>`;
-  const grid = document.createElement('div');
-  grid.className = 'grid';
-  card.grid.forEach(row => row.forEach(num => {
-    const cell = document.createElement('div');
-    cell.className = 'cell';
-    cell.textContent = num === "FREE" ? "★" : num;
-    if (num === "FREE") cell.classList.add('free');
-    grid.appendChild(cell);
-  }));
-  div.appendChild(grid);
-  div.onclick = () => {
-    if (div.classList.contains('reserved')) return;
-    document.getElementById('modal-card-id').textContent = card.id;
-    document.getElementById('reserve-form').dataset.id = card.id;
-    document.getElementById('modal').classList.remove('hidden');
-  };
-  cardsContainer.appendChild(div);
+/*  =========  RESERVAS EXISTENTES  =========  */
+async function cargarVendidos() {
+  try {
+    const data = await fetch(API_URL).then(r => r.json());
+    vendidos = new Set(
+      (data.reservas || [])
+        .filter(r => r.ESTADO === 'RESERVADO')
+        .map(r => String(r.ID))
+    );
+  } catch (err) {
+    console.warn('No pude obtener reservas:', err);
+  }
 }
 
-document.getElementById('reserve-form').addEventListener('submit', async e => {
+/*  =========  RENDER  =========  */
+function crearCarton({ id, grid }) {
+  const art = document.createElement('article');
+  art.className = 'carton';
+  art.dataset.id = id;
+
+  art.innerHTML = `
+    <h3>#${String(id).padStart(4, '0')}</h3>
+    <div class="grid">
+      ${grid.flat().map(c => `<div class="cell">${c === 'FREE' ? '★' : c}</div>`).join('')}
+    </div>
+  `;
+
+  if (vendidos.has(String(id))) {
+    art.classList.add('vendido');
+  } else {
+    art.addEventListener('click', () => abrirModal(id));
+  }
+  return art;
+}
+
+function pintarBloque() {
+  if (cargando || pintados >= cartones.length) return;
+  cargando = true;
+
+  const frag = document.createDocumentFragment();
+  for (let i = pintados; i < pintados + BLOQUE && i < cartones.length; i++) {
+    frag.appendChild(crearCarton(cartones[i]));
+  }
+  pintados += BLOQUE;
+  contenedor.appendChild(frag);
+
+  cargando = false;
+  if (pintados >= cartones.length) loader.style.display = 'none';
+}
+
+function observarScroll() {
+  const sentinel = document.createElement('div');
+  contenedor.appendChild(sentinel);
+  new IntersectionObserver(e => {
+    if (e[0].isIntersecting) pintarBloque();
+  }).observe(sentinel);
+}
+
+/*  =========  MODAL  =========  */
+function abrirModal(id) {
+  inputID.value = id;
+  spanNum.textContent = id;
+  modal.classList.remove('hidden');
+}
+function cerrarModal() {
+  modal.classList.add('hidden');
+  formRes.reset();
+}
+window.cerrarModal = cerrarModal;
+
+/*  =========  RESERVAR (Sheets + WhatsApp)  =========  */
+formRes.addEventListener('submit', async e => {
   e.preventDefault();
-  const id = e.target.dataset.id;
-  const nombre = e.target.nombre.value;
-  const apellido = e.target.apellido.value;
-  const telefono = e.target.telefono.value;
-  const params = new URLSearchParams({ id, nombre, apellido, telefono });
-  await fetch(API_URL + '?' + params.toString());
-  const msg = `Hola, quiero reservar el cartón #${id}\nNombre: ${nombre} ${apellido}\nTeléfono: ${telefono}`;
-  window.open(`https://wa.me/${WHATSAPP_PHONE}?text=${encodeURIComponent(msg)}`, '_blank');
-  document.getElementById('modal').classList.add('hidden');
-  location.reload();
-});
+  const fd = new FormData(formRes);
 
-document.getElementById('modal-close').onclick = () => {
-  document.getElementById('modal').classList.add('hidden');
-};
+  // 1) Guardar en Google Sheets
+  const payload = {
+    action:  'reserve',
+    ID:      fd.get('ID'),
+    Nombre:  fd.get('Nombre'),
+    Apellido:fd.get('Apellido'),
+    Telefono:fd.get('Teléfono')
+  };
 
-document.getElementById('btn-unlock').onclick = () => {
-  const pwd = prompt("Introduce la contraseña:");
-  if (pwd === ADMIN_PASSWORD) {
-    document.getElementById('control-panel').classList.remove('locked');
-    unlocked = true;
+  const res = await fetch(API_URL, {
+    method:  'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body:    JSON.stringify(payload)
+  }).then(r => r.json());
+
+  if (!res.ok) {
+    alert('No se pudo registrar: ' + (res.error || ''));
+    return;
   }
-};
 
-document.getElementById('btn-start').onclick = () => {
-  if (isDrawing) return;
-  isDrawing = true;
-  drawInterval = setInterval(drawNumber, DRAW_INTERVAL);
-};
+  // 2) Marcar como vendido en la interfaz
+  vendidos.add(payload.ID);
+  contenedor.querySelector(`.carton[data-id="${payload.ID}"]`)?.classList.add('vendido');
 
-document.getElementById('btn-stop').onclick = () => {
-  isDrawing = false;
-  clearInterval(drawInterval);
-};
+  // 3) Redirigir a WhatsApp
+  window.open(`${whatsappBase}${payload.ID}`, '_blank');
 
-document.getElementById('btn-voice').onclick = () => {
-  voiceEnabled = !voiceEnabled;
-};
-
-document.getElementById('btn-reset').onclick = () => {
-  if (!unlocked) return;
-  drawnNumbers = [];
-  drawnGrid.innerHTML = '';
-};
-
-document.querySelectorAll('.mode').forEach(btn => {
-  btn.onclick = () => currentMode = btn.dataset.mode;
+  cerrarModal();
 });
-
-document.getElementById('btn-search').onclick = () => {
-  const val = parseInt(document.getElementById('search-input').value);
-  if (!val) return;
-  const el = [...document.querySelectorAll('.card')].find(c => parseInt(c.dataset.id) === val);
-  if (el) el.scrollIntoView({ behavior: 'smooth' });
-};
-
-function drawNumber() {
-  if (drawnNumbers.length >= 75) return;
-  let num;
-  do {
-    num = Math.floor(Math.random() * 75) + 1;
-  } while (drawnNumbers.includes(num));
-  drawnNumbers.push(num);
-  const letter = "BINGO"[Math.floor((num - 1) / 15)];
-  const full = `${letter}-${num}`;
-  const div = document.createElement('div');
-  div.className = 'drawn-num';
-  div.textContent = full;
-  drawnGrid.appendChild(div);
-  if (voiceEnabled) speak(full);
-}
-
-function speak(text) {
-  const utter = new SpeechSynthesisUtterance(text);
-  speechSynthesis.speak(utter);
-}
-
-// Scroll infinito
-let offset = 0;
-let loading = false;
-const observer = new IntersectionObserver(async entries => {
-  if (entries[0].isIntersecting && !loading) {
-    loading = true;
-    offset += 50;
-    await loadCards(offset, 50);
-    loading = false;
-  }
-});
-observer.observe(sentinel);
-
-// Inicial
-loadCards();
