@@ -1,5 +1,5 @@
 /*  =========  CONFIGURACIÓN  =========  */
-const API_URL  = 'https://script.google.com/macros/s/AKfycbxdrSJhX7HuTyfieoZNo5LY7DkC4Wpz2ltPqWCAGPJFQW6ntTftrtvlBIMV9Q9lvmbnow/exec';
+const API_URL  = 'https://script.google.com/macros/s/AKfycbwG-U5U7jrxHM2yUwkp3cc2uDbBpAzYDvezv7vNfwHHQamyXYEau6mbiJIYjVCkHVXp/exec';
 const CARTONES_JSON = 'bingo_cards.json';      // pon aquí tu archivo de 1000 cartones
 const BLOQUE = 50;                             // cartones por carga
 const whatsappBase = 'https://wa.me/584266404042?text=Hola,%20quiero%20comprar%20el%20cart%C3%B3n%20n%C3%BAmero%20';
