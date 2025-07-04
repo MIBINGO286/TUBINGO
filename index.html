@@ -8,16 +8,16 @@
 </head>
 <body>
   <header>
-    <h1>BINGO JOKER</h1>
+    <h1>BINGO JOKER</h1>
 
-    <!--🔍 Buscador siempre visible-->
-    <input id="search-input" type="search" placeholder="Buscar cartón #…" />
+    <!--🔍 Buscador siempre visible-->
+    <input id="search-input" type="search" placeholder="Buscar cartón #…" />
 
-    <!--🔒 Control panel toggle-->
+    <!--🔒 Control panel toggle-->
     <button id="btn-toggle-panel" title="Panel de control">🎛️</button>
   </header>
 
-  <!--🎛 PANEL DE CONTROL-->
+  <!--🎛 PANEL DE CONTROL-->
   <aside id="panel" class="hidden">
     <h2>Panel de control</h2>
 
@@ -54,7 +54,7 @@
 
       <section>
         <h3>Administrar cartones</h3>
-        <label>Cartón # <input id="input-unreserve" type="number" min="1" /></label>
+        <label>Cartón # <input id="input-unreserve" type="number" min="1" /></label>
         <button id="btn-unreserve">Liberar cartón</button>
       </section>
     </div>
@@ -68,7 +68,7 @@
   <!--Modal reserva-->
   <div id="modal" class="modal hidden">
     <div class="modal-content">
-      <h2>Reservar cartón #<span id="carton-numero"></span></h2>
+      <h2>Reservar cartón #<span id="carton-numero"></span></h2>
       <form id="form-reserva" autocomplete="off">
         <input type="hidden" name="ID" id="input-id" />
         <label>Nombre <input name="Nombre" required /></label>
