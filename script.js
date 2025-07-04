@@ -1,5 +1,5 @@
 
-const API_URL = 'https://script.google.com/macros/s/AKfycbwG-U5U7jrxHM2yUwkp3cc2uDbBpAzYDvezv7vNfwHHQamyXYEau6mbiJIYjVCkHVXp/exec';
+const API_URL = 'https://script.google.com/macros/s/AKfycbx57uJAuvvfeNOsZ-q1TM4XPxMNImB61yFKhkDABmfO6U_2bqveYGLEK2O34VRClnO6HA/exec';
 const CARDS_JSON = 'bingo_cards.json';
 const WHATSAPP_PHONE = '584266404042';
 const ADMIN_PASSWORD = 'Jrr035$$*';
