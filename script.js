@@ -2,7 +2,7 @@
 
 /***********************  CONFIG ***********************/
 const WEBAPP_URL  = 'https://script.google.com/macros/s/AKfycbyYn5NKpSjiYaEnggiuEurXVnJej5De1Bc9gLQ7SKJIF1wNtrZjlw87ni5_R2abFpqGnw/exec';
-const SHEET_JSONP = 'https://opensheet.elk.sh/1kPdCww-t1f_CUhD9egbeNn6robyapky8PWCS63P31j4/CARTONES'; // URL directa de la hoja RESERVAS
+const SHEET_JSONP = 'https://script.google.com/macros/s/AKfycbx57uJAuvvfeNOsZ-q1TM4XPxMNImB61yFKhkDABmfO6U_2bqveYGLEK2O34VRClnO6HA/exec'; // URL directa de la hoja RESERVAS
 const BLOQUE      = 50;
 const WHATS_APP   = '584266404042';
 const PANEL_PASS  = 'joker123';
