@@ -1,308 +1,91 @@
-// script.js – versión completa con panel, sorteo, detección de ganadores y CORS resuelto mediante iframe/JSONP
+// script.js — versión con **bloqueo manual persistente** (sin Google Sheets) y panel ordenado
+/*********************** CONFIG ***********************/
+const WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbxKH9xP-YZ6UXdTw9MtjeF9C19lMlXH0k-oMrbXiWqhrhoN0xJJPPpa6NOGFJo7x_5G/exec';
+const SHEET_URL  = 'https://opensheet.elk.sh/1YeHvkb5ag9hdL1VZTtXyi3PKwio7RWQ5tr-WaDKd52g/RESERVAS';
+const BLOQUE     = 50;
+const WHATS_APP  = '584266404042';
+const PANEL_PASS = 'joker123';
 
-/***********************  CONFIG ***********************/
-const WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbzapkct2eJCEvb-5XwDjpHNfe7LCNgrCJQMJzOQDQxmSBvOJBgtYxmuGadJ1oSfmshe7A/exec';
-const SHEET_JSONP = 'https://opensheet.elk.sh/1kPdCww-t1f_CUhD9egbeNn6robyapky8PWCS63P31j4/RESERVAS';
-const BLOQUE      = 50;
-const WHATS_APP   = '584266404042';    // tu número WhatsApp sin +
-const PANEL_PASS  = 'joker123';        // contraseña para panel control
+/*********************** ESTADO ***********************/
+let cartones = [], pintados = 0;
+let vendidos = new Set();            // reservados en Google Sheets
+let manual   = new Set(JSON.parse(localStorage.getItem('BLOCKS')||'[]')); // bloqueados localmente y persistentes
+let drawn    = new Set();
+let bolas    = Array.from({length:75},(_,i)=>i+1);
+let intervalo = null;
 
-/*******************  VARIABLES GLOBALES *******************/
-let cartones   = [];          // catálogos locales
-let vendidos   = new Set();   // IDs reservados
-let pintados   = 0;           // cuántos cartones ya se pintaron
-let drawn      = new Set();   // números ya extraídos
-let remainingBalls = Array.from({length:75},(_,i)=>i+1);
-let drawInterval   = null;
+/********************* REFERENCIAS *********************/
+const $ = s=>document.querySelector(s);
+const cont=$('#cartones-container'), loader=$('#loader');
+const modal=$('#modal'), form=$('#form-reserva'), spanNum=$('#carton-numero'), inputID=$('#input-id'), btnDesc=$('#btn-descargar');
+const panel=$('#panel'), btnToggle=$('#btn-toggle-panel'), btnUnlock=$('#btn-unlock'), pw=$('#password-input'), panelC=$('#panel-content');
+const btnStart=$('#btn-start-draw'), btnStop=$('#btn-stop-draw'), curr=$('#current-ball'), hist=$('#history'), btnRestart=$('#btn-restart');
+const modes=[...document.querySelectorAll('input[name="mode"]')];
+const inputBlock=$('#input-block-carton'), btnBlock=$('#btn-block-carton');
+const inputFree=$('#input-unreserve'),   btnFree=$('#btn-unreserve');
+const search=$('#search-input');
 
-/*******************  REFERENCIAS DOM *******************/
-const contenedor   = document.getElementById('cartones-container');
-const loader       = document.getElementById('loader');
-const modal        = document.getElementById('modal');
-const formRes      = document.getElementById('form-reserva');
-const spanNum      = document.getElementById('carton-numero');
-const inputID      = document.getElementById('input-id');
+/*********************** INIT **************************/
+window.addEventListener('DOMContentLoaded',init);
+async function init(){
+  /* 1 – cartones.json */
+  try{ const r=await fetch('cartones.json',{cache:'no-store'}); cartones=await r.json(); cartones.sort((a,b)=>a.id-b.id);}catch(e){loader.textContent='❌ cartones';return;}
+  pintar(); observar();
 
-// Panel control elementos (asegúrate de tenerlos en tu HTML)
-const panel          = document.getElementById('panel');
-const btnTogglePanel = document.getElementById('btn-toggle-panel');
-const btnUnlock      = document.getElementById('btn-unlock');
-const passwordInput  = document.getElementById('password-input');
-const panelContent   = document.getElementById('panel-content');
-const btnStartDraw   = document.getElementById('btn-start-draw');
-const btnStopDraw    = document.getElementById('btn-stop-draw');
-const currentBall    = document.getElementById('current-ball');
-const historyList    = document.getElementById('history');
-const btnRestart     = document.getElementById('btn-restart');
-const modeRadios     = document.querySelectorAll('input[name="mode"]');
-const inputUnreserve = document.getElementById('input-unreserve');
-const btnUnreserve   = document.getElementById('btn-unreserve');
-const searchInput    = document.getElementById('search-input');
-
-/*******************  INICIALIZACIÓN *******************/
-window.addEventListener('DOMContentLoaded', async ()=>{
-  // Carga de cartones desde local
-  cartones = await fetch('cartones.json').then(r=>r.json());
-  cartones.sort((a,b)=>a.id-b.id);
-  pintarBloque();
-  observarScroll();
-
-  // Cargar cartones vendidos con JSONP para evitar CORS
-  jsonp(SHEET_JSONP,'jsonpVendidos',data=>{
-    vendidos = new Set(data.filter(r=>String(r.Estado||r.ESTADO).toUpperCase()==='RESERVADO').map(r=>String(r.ID)));
-    refrescarVendidos();
-  });
-});
-
-/*******************  JSONP helper *******************/
-function jsonp(url,cb,cbfn){
-  const s=document.createElement('script');
-  window[cb]=d=>{cbfn(d);delete window[cb];s.remove();};
-  s.src=`${url}?callback=${cb}`;
-  document.body.appendChild(s);
+  /* 2 – reservas Google Sheets */
+  try{ const r=await fetch(SHEET_URL,{cache:'no-store'}); const d=await r.json(); vendidos=new Set(d.filter(x=>String(x.Estado||x.ESTADO).toUpperCase()==='RESERVADO').map(x=>String(x.ID))); refrescar();}catch(e){console.warn('sin reservas');}
 }
 
-/*******************  FUNCIONES PARA CARTONES *******************/
-function crearCarton({id,grid}){
-  const a=document.createElement('article');
-  a.className='carton'; a.dataset.id=id;
-  const gridHtml = grid.flat().map(n=>{
-    const marked = (n!=='FREE' && drawn.has(n)) ? 'marked':'';
-    return `<div class="cell ${marked}" data-num="${n}">${n==='FREE'?'★':n}</div>`;
-  }).join('');
-  a.innerHTML=`<h3>#${id.toString().padStart(4,'0')}</h3><div class="grid">${gridHtml}</div>`;
-  if(vendidos.has(String(id))) a.classList.add('vendido');
-  else a.onclick=()=>abrirModal(id);
-  return a;
+/********************* CARTONES ************************/
+function crear({id,grid}){
+  const art=document.createElement('article'); art.className='carton'; art.dataset.id=id;
+  art.innerHTML=`<h3>#${id.toString().padStart(4,'0')}</h3><div class="grid">${grid.flat().map(n=>`<div class="cell" data-num="${n}">${n==='FREE'?'★':n}</div>`).join('')}</div>`;
+  if(bloqueado(id)) art.classList.add('vendido'); else art.onclick=()=>abrir(id);
+  return art;
 }
-function pintarBloque(){
-  const frag=document.createDocumentFragment();
-  for(let i=pintados;i<pintados+BLOQUE&&i<cartones.length;i++) frag.appendChild(crearCarton(cartones[i]));
-  pintados+=BLOQUE; contenedor.appendChild(frag);
-  if(pintados>=cartones.length) loader.style.display='none';
-}
-function observarScroll(){
-  const sent=document.createElement('div');contenedor.appendChild(sent);
-  new IntersectionObserver(e=>{if(e[0].isIntersecting) pintarBloque();}).observe(sent);
-}
-function refrescarVendidos(){
-  contenedor.querySelectorAll('.carton').forEach(c=>{
-    if(vendidos.has(c.dataset.id)) c.classList.add('vendido');
-    else c.classList.remove('vendido');
-  });
-}
+function pintar(){const f=document.createDocumentFragment(); for(let i=pintados;i<pintados+BLOQUE&&i<cartones.length;i++)f.appendChild(crear(cartones[i])); pintados+=BLOQUE; cont.appendChild(f); if(pintados>=cartones.length) loader.style.display='none';}
+function observar(){const s=document.createElement('div'); cont.appendChild(s); new IntersectionObserver(e=>e[0].isIntersecting&&pintar()).observe(s);} 
+function refrescar(){cont.querySelectorAll('.carton').forEach(c=>bloqueado(c.dataset.id)?c.classList.add('vendido'):c.classList.remove('vendido'));}
 
-/*******************  RESERVAR CARTÓN (iframe para evitar CORS) *******************/
-function abrirModal(id){
-  inputID.value=id;
-  spanNum.textContent=id;
-  modal.classList.remove('hidden');
-}
-function cerrarModal(){
-  modal.classList.add('hidden');
-  formRes.reset();
-}
-window.cerrarModal=cerrarModal;
+/******************* UTILIDADES ***********************/
+const bloqueado = id => vendidos.has(String(id)) || manual.has(String(id));
+const guardarManual = () => localStorage.setItem('BLOCKS',JSON.stringify([...manual]));
 
-formRes.addEventListener('submit',e=>{
+/******************* MODAL RESERVA ********************/
+function abrir(id){ inputID.value=id; spanNum.textContent=id; modal.classList.remove('hidden'); }
+function cerrar(){ modal.classList.add('hidden'); form.reset(); btnDesc.classList.add('hidden'); }
+window.cerrarModal=cerrar;
+
+form.addEventListener('submit',e=>{
   e.preventDefault();
-  const fd=new FormData(formRes);
-  if(vendidos.has(fd.get('ID'))){
-    alert('Este cartón ya está reservado.');
-    return;
-  }
-
-  // Enviar formulario vía iframe oculto para evitar CORS
-  const ifr=document.createElement('iframe');
-  ifr.name='hidden_iframe';
-  ifr.style.display='none';
-  document.body.appendChild(ifr);
-
-  const f=document.createElement('form');
-  f.action=WEBAPP_URL;
-  f.method='POST';
-  f.target='hidden_iframe';
-  fd.forEach((v,k)=>{
-    const i=document.createElement('input');
-    i.name=k; i.value=v;
-    f.appendChild(i);
-  });
-  document.body.appendChild(f);
-  f.submit();
-
-  // Marcar vendido y refrescar UI
-  const id=fd.get('ID');
-  vendidos.add(id);
-  refrescarVendidos();
-
-  // Abrir WhatsApp para confirmar
-  window.open(`https://wa.me/${WHATS_APP}?text=Hola,%20acabo%20de%20reservar%20el%20cartón%20${id}.`,'_blank');
-
-  cerrarModal();
+  const fd=new FormData(form); const id=fd.get('ID');
+  if(bloqueado(id)){ alert('Cartón bloqueado o reservado'); return; }
+  reservar(fd,id);
 });
 
-/*******************  PANEL DE CONTROL *******************/
-btnTogglePanel.onclick=()=>panel.classList.toggle('hidden');
-btnUnlock.onclick=()=>{
-  if(passwordInput.value===PANEL_PASS){
-    panelContent.classList.remove('hidden');
-    passwordInput.value='';
-  } else alert('Contraseña incorrecta');
-};
-
-/*******************  SORTEO *******************/
-function letterFor(n){
-  if(n<=15)return 'B';
-  if(n<=30)return 'I';
-  if(n<=45)return 'N';
-  if(n<=60)return 'G';
-  return 'O';
+function reservar(fd,id){ // envía a Apps Script + WhatsApp + bloquea
+  const ifr=document.createElement('iframe'); ifr.name='h_iframe'; ifr.style.display='none'; document.body.appendChild(ifr);
+  const f=document.createElement('form'); f.action=WEBAPP_URL; f.method='POST'; f.target='h_iframe';
+  fd.forEach((v,k)=>{const i=document.createElement('input'); i.name=k; i.value=v; f.appendChild(i);}); document.body.appendChild(f); f.submit();
+  vendidos.add(id); refrescar();
+  window.open(`https://wa.me/${WHATS_APP}?text=${encodeURIComponent('Hola, quiero comprar el cartón '+id)}`,'_blank');
+  btnDesc.classList.remove('hidden'); btnDesc.onclick=()=>jpg(id);
+  cerrar();
 }
-function drawBall(){
-  if(remainingBalls.length === 0){
-    stopDraw();
-    alert('¡No quedan más bolas!');
-    return;
-  }
-  const idx=Math.floor(Math.random()*remainingBalls.length);
-  const num=remainingBalls.splice(idx,1)[0];
-  drawn.add(num);
-  currentBall.textContent=`${letterFor(num)} - ${num}`;
-  const li=document.createElement('li');
-  li.textContent=`${letterFor(num)}${num}`;
-  historyList.prepend(li);
-  marcarNumero(num);
-  verificarGanador();
-}
-function startDraw(){
-  if(drawInterval) return;
-  drawBall();
-  drawInterval=setInterval(drawBall,4000);
-  btnStartDraw.disabled=true;
-  btnStopDraw.disabled=false;
-}
-function stopDraw(){
-  clearInterval(drawInterval);
-  drawInterval=null;
-  btnStartDraw.disabled=false;
-  btnStopDraw.disabled=true;
-}
-btnStartDraw.onclick=startDraw;
-btnStopDraw.onclick=stopDraw;
+function jpg(id){const art=document.querySelector(`.carton[data-id="${id}"]`); html2canvas(art).then(c=>{const a=document.createElement('a'); a.href=c.toDataURL('image/jpeg'); a.download=`carton_${id}.jpg`; a.click();});}
 
-/*******************  REINICIAR PARTIDA *******************/
-btnRestart.onclick=()=>{
-  if(confirm('¿Reiniciar partida?')){
-    stopDraw();
-    remainingBalls=Array.from({length:75},(_,i)=>i+1);
-    drawn.clear();
-    currentBall.textContent='';
-    historyList.innerHTML='';
-    contenedor.querySelectorAll('.cell.marked').forEach(c=>c.classList.remove('marked'));
-  }
-};
+/******************* PANEL DE CONTROL *****************/
+btnToggle.onclick=()=>panel.classList.toggle('hidden');
+btnUnlock.onclick=()=>{ if(pw.value===PANEL_PASS){ panelC.classList.remove('hidden'); pw.value=''; } else alert('Contraseña incorrecta'); };
+btnBlock.onclick=()=>{ const id=inputBlock.value.trim(); if(!id)return; manual.add(id); guardarManual(); refrescar(); alert('Bloqueado '+id); };
+btnFree.onclick =()=>{ const id=inputFree.value.trim(); if(!manual.has(id)){ alert('No está bloqueado manual'); return;} manual.delete(id); guardarManual(); refrescar(); alert('Desbloqueado '+id);} ;
+search.addEventListener('input',()=>{const q=search.value.trim(); cont.querySelectorAll('.carton').forEach(c=>{c.style.display=c.dataset.id.startsWith(q)?'block':'none';});});
 
-/*******************  MARCAR NÚMERO EN LOS CARTONES *******************/
-function marcarNumero(n){
-  document.querySelectorAll(`.cell[data-num="${n}"]`).forEach(c=>c.classList.add('marked'));
-}
-
-/*******************  DETECCIÓN DE GANADORES *******************/
-function getMode(){
-  const checked = [...modeRadios].find(r=>r.checked);
-  return checked ? checked.value : 'full';
-}
-function cartonGanador(grid,mode){
-  const m=n=> n==='FREE' || drawn.has(n);
-  if(mode==='full') return grid.flat().every(m);
-  if(mode==='horizontal') return grid.some(row => row.every(m));
-  if(mode==='vertical') {
-    for(let c=0;c<grid[0].length;c++){
-      let colWin = true;
-      for(let r=0;r<grid.length;r++){
-        if(!m(grid[r][c])){
-          colWin = false;
-          break;
-        }
-      }
-      if(colWin) return true;
-    }
-    return false;
-  }
-  if(mode==='diagonal'){
-    const d1 = [0,1,2,3,4].every(i=>m(grid[i][i]));
-    const d2 = [0,1,2,3,4].every(i=>m(grid[i][4-i]));
-    return d1 || d2;
-  }
-  return false;
-}
-function verificarGanador(){
-  const mode = getMode();
-  for(let c of contenedor.querySelectorAll('.carton:not(.vendido)')){
-    const id = c.dataset.id;
-    const carton = cartones.find(x=>String(x.id)===id);
-    if(!carton) continue;
-    if(cartonGanador(carton.grid, mode)){
-      stopDraw();
-      alert(`¡Cartón ganador: #${id}!`);
-      c.classList.add('ganador');
-      break;
-    }
-  }
-}
-
-/*******************  PANEL DE CONTROL: LIBERAR CARTÓN *******************/
-btnUnreserve.onclick=()=>{
-  const id = inputUnreserve.value.trim();
-  if(!id){
-    alert('Ingrese ID de cartón para liberar');
-    return;
-  }
-  if(!vendidos.has(id)){
-    alert('Este cartón no está reservado');
-    return;
-  }
-
-  // Enviar formulario vía iframe para liberar
-  const ifr=document.createElement('iframe');
-  ifr.name='hidden_iframe';
-  ifr.style.display='none';
-  document.body.appendChild(ifr);
-
-  const f=document.createElement('form');
-  f.action=WEBAPP_URL;
-  f.method='POST';
-  f.target='hidden_iframe';
-
-  // Para liberar, enviamos Estado=LIBRE
-  const inputs = [
-    {name:'ID', value:id},
-    {name:'Estado', value:'LIBRE'},
-    {name:'Nombre', value:''},
-    {name:'Apellido', value:''},
-    {name:'Teléfono', value:''}
-  ];
-  inputs.forEach(({name,value})=>{
-    const i=document.createElement('input');
-    i.name=name; i.value=value;
-    f.appendChild(i);
-  });
-  document.body.appendChild(f);
-  f.submit();
-
-  vendidos.delete(id);
-  refrescarVendidos();
-  alert(`Cartón #${id} liberado.`);
-};
-
-/*******************  BUSCADOR DE CARTONES *******************/
-searchInput.addEventListener('input', e=>{
-  const val = e.target.value.trim();
-  if(!val){
-    contenedor.querySelectorAll('.carton').forEach(c=>c.style.display='');
-    return;
-  }
-  contenedor.querySelectorAll('.carton').forEach(c=>{
-    c.style.display = c.dataset.id.includes(val) ? '' : 'none';
-  });
-});
+/******************* SORTEO AUTOMÁTICO ****************/ 
+function letra(n){return n<=15?'B':n<=30?'I':n<=45?'N':n<=60?'G':'O';}
+function extraer(){ if(!bolas.length){ detener(); alert('Fin del sorteo'); return; } const i=Math.random()*bolas.length|0; const num=bolas.splice(i,1)[0]; drawn.add(num); curr.textContent=`${letra(num)} - ${num}`; const li=document.createElement('li'); li.textContent=letra(num)+num; hist.prepend(li);} 
+function marcar(n){ document.querySelectorAll(`.cell[data-num="${n}"]`).forEach(c=>c.classList.add('marked')); }
+function iniciar(){ if(intervalo) return; extraer(); intervalo=setInterval(()=>{ extraer(); marcar(curr.textContent.split(' - ')[1]); },4000); btnStart.disabled=true; btnStop.disabled=false; }
+function detener(){ clearInterval(intervalo); intervalo=null; btnStart.disabled=false; btnStop.disabled=true; }
+btnStart.addEventListener('click',iniciar); btnStop.addEventListener('click',detener);
+btnRestart.addEventListener('click',()=>{ if(confirm('¿Reiniciar partida?')){ detener(); bolas=[...Array(75)].map((_,i)=>i+1); drawn.clear(); hist.innerHTML=''; curr.textContent=''; cont.querySelectorAll('.cell.marked').forEach(c=>c.classList.remove('marked')); } });
