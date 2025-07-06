@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>BINGO JOKER</title>
 
-  <!-- Librería para descargar el cartón en JPG -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 
   <link rel="stylesheet" href="style.css" />
@@ -19,18 +18,14 @@
   <header>
     <h1>BINGO JOKER</h1>
 
-    <!-- Buscador -->
     <input id="search-input" type="search" placeholder="Buscar cartón #…" />
 
-    <!-- Abrir / cerrar panel -->
     <button id="btn-toggle-panel">🎛️ Panel</button>
   </header>
 
-  <!-- PANEL DE CONTROL -->
   <aside id="panel" class="hidden">
     <h2>Panel de control</h2>
 
-    <!-- Desbloqueo -->
     <div id="unlock-area">
       <input id="password-input" type="password" placeholder="Contraseña" />
       <button id="btn-unlock">Desbloquear</button>
@@ -38,7 +33,6 @@
 
     <div id="panel-content" class="hidden">
 
-      <!-- Sorteo -->
       <section>
         <h3>Sorteo automático</h3>
         <button id="btn-start-draw">Iniciar sorteo</button>
@@ -46,7 +40,6 @@
         <p id="current-ball"></p>
       </section>
 
-      <!-- Modalidad -->
       <section>
         <h3>Modalidad de juego</h3>
         <label><input type="radio" name="mode" value="full" checked /> Cartón lleno</label>
@@ -55,25 +48,21 @@
         <label><input type="radio" name="mode" value="diagonal" /> Diagonal</label>
       </section>
 
-      <!-- Historial -->
       <section>
         <h3>Historial de bolas</h3>
         <ul id="history"></ul>
         <button id="btn-restart">Reiniciar partida</button>
       </section>
 
-      <!-- Administrar cartones -->
       <section>
         <h3>Administrar cartones</h3>
 
-        <!-- Bloquear manual -->
         <label>Bloquear cartón #
           <input id="input-block-carton" type="number" min="1" />
         </label>
         <button id="btn-block-carton">Bloquear cartón</button>
         <br /><br />
 
-        <!-- Liberar -->
         <label>Liberar cartón #
           <input id="input-unreserve" type="number" min="1" />
         </label>
@@ -82,13 +71,11 @@
     </div>
   </aside>
 
-  <!-- Zona de cartones -->
   <main>
     <div id="cartones-container"></div>
     <div id="loader">Cargando cartones…</div>
   </main>
 
-  <!-- Modal de reserva -->
   <div id="modal" class="modal hidden">
     <div class="modal-content">
       <h2>Reservar cartón #<span id="carton-numero"></span></h2>
@@ -97,7 +84,7 @@
         <input type="hidden" name="ID" id="input-id" />
         <label>Nombre   <input name="Nombre"   required /></label>
         <label>Apellido <input name="Apellido" required /></label>
-        <label>Teléfono <input name="Teléfono" pattern="\\d{10,}" required /></label>
+        <label>Teléfono <input name="Teléfono" type="tel" pattern="\d{10,}" title="Introduce al menos 10 dígitos (solo números)" required /></label>
 
         <button type="submit" id="btn-reservar">Reservar</button>
         <button type="button" onclick="cerrarModal()">Cancelar</button>
